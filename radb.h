@@ -61,7 +61,7 @@ typedef struct
     Fixed prototypes
  -----------------------------------------------------------------------------------------------------------------------
  */
-
+  
 int radb_do(radbMaster* radbm, const char *statement, ...);
 radbObject *radb_prepare(radbMaster* radbm, const char *statement, ...);
 void        radb_free_result(radbResult *result);
