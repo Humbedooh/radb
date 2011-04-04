@@ -1,0 +1,22 @@
+=RADB
+A simple SQL layer for using the same API calls for different engines.
+
+==Example:
+{{{
+#include "radb.h"
+void someFunc(void) {
+	radbMaster* db;
+	radbObject* dbo;
+	radbResult* result;
+	db = radb_init_sqlite("mydatabase.db");
+	dbo = radb_prepare("SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u", "JohnDoe's Mother", 97);
+	while ((result = radb_step(dbo))) {
+		printf("City: %s, country: %s, no. of pets: %u\n", \
+			result->column[0].data.string, \
+			result->column[1].data.string, \
+			result->column[2].data.uint32 );
+			
+	}
+	radb_cleanup(dbo); /* Clean up results and close the handle */
+}
+}}}
