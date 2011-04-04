@@ -204,6 +204,7 @@ radbObject *radb_prepare(radbMaster *radbm, const char *statement, ...) {
     }
 #endif
     va_end(args);
+    dbo->status = RADB_EXECUTED;
     return (dbo);
 }
 
@@ -657,19 +658,22 @@ void radb_prepare_sqlite(radbObject *dbo, const char *statement, va_list vl) {
         return;
     }
 
-    for (at = 0; injects[at] != 0; at++) {
-        switch (injects[at])
-        {
-        case 's':   rc = sqlite3_bind_text((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, const char *), -1, SQLITE_TRANSIENT); break;
-        case 'u':   rc = sqlite3_bind_int((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, unsigned int)); break;
-        case 'i':   rc = sqlite3_bind_int((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, signed int)); break;
-        case 'l':   rc = sqlite3_bind_int64((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, signed long long int)); break;
-        case 'f':   rc = sqlite3_bind_double((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, double)); break;
-        default:    break;
-        }
+    if (at) {
+        for (at = 0; injects[at] != 0; at++) {
+            switch (injects[at])
+            {
+            case 's':   rc = sqlite3_bind_text((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, const char *), -1, SQLITE_TRANSIENT); break;
+            case 'u':   rc = sqlite3_bind_int((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, unsigned int)); break;
+            case 'i':   rc = sqlite3_bind_int((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, signed int)); break;
+            case 'l':   rc = sqlite3_bind_int64((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, signed long long int)); break;
+            case 'f':   rc = sqlite3_bind_double((sqlite3_stmt *) dbo->state, at + 1, va_arg(vl, double)); break;
+            default:    break;
+            }
 
-        if (rc != SQLITE_OK) {
-            dbo->state = 0;
+            if (rc != SQLITE_OK) {
+                printf("SQLite aborted with code %d at item %u!\r\n", rc, at+1);
+                dbo->state = 0;
+            }
         }
     }
 }

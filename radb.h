@@ -1,11 +1,13 @@
 /*$I0 */
-#include <mysql.h>
-#include <sqlite3.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <stdarg.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#endif
 #ifndef _RADB_H_
 #   define _RADB_H_
 #   define RADB_EMPTY      0
@@ -16,6 +18,17 @@
 #   define RADB_BOUND      3
 #   define RADB_EXECUTED   4
 #   define RADB_FETCH      5
+#include <mysql.h>
+#include <sqlite3.h>
+#      ifndef uint32_t
+typedef unsigned char       uint8_t;
+typedef unsigned short      uint16_t;
+typedef unsigned int        uint32_t;
+typedef signed int          int32_t;
+typedef unsigned long long  uint64_t;
+typedef signed int          ssize_t;
+typedef long long           int64_t;
+#endif
 /*#   define RADB_DEBUG*/
 typedef struct
 {
