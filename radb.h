@@ -26,10 +26,6 @@ typedef struct
 {
     radbChild   *children;
     unsigned    count;
-
-    /*
-     * rumble_readerwriter rrw;
-     */
 } radbPool;
 typedef struct
 {
