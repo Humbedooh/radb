@@ -125,6 +125,23 @@ Public functions
 * `void    radb_close(radbMaster *dbm)`:
     Shuts down the database connection and frees any existing handles.
     
+Structure of the results object
+-------------------------------
+
+* `radbResult` ->
+* * items (`unsigned int`): The number of columns in the returned row.
+* * column[] (`radbItem*`) ->
+* * * type (`enum (STRING=1,NUMBER=2)`): The type of data returned
+* * * data (`union`): A union struct with all types of returnable data:
+* * * * string (`char*`): Return data as a string pointer
+* * * * uint32 (`uint32_t` or unsigned int): Return value as a 32 bit unsigned int.
+* * * * int32 (`int32_t` or signed int): Return value as a 32 bit signed int.
+* * * * int64 (`int64_t` or signed long long int): Return value as a 64 bit signed int.
+* * * * uint64 (`uint64_t` or unsigned long long int): Return value as a 64 bit unsigned int.
+* * * * double (`double`): Return value as a 64 bit floating point value.
+* * * * float (`float`): Return value as a 32 bit floating point value.
+
+    
 
 Some final examples
 -------------------
