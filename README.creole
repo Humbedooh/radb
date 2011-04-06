@@ -2,7 +2,7 @@
 A simple SQL layer for using the same API calls for different engines.
 All connection handles and objects are handled by the layer, and prepared 
 statements can be accessed through the printf-styled functions.
-
+ 
 ==A quick example:
 {{{
 #!c
@@ -21,15 +21,11 @@ void someFunc(void) {
 	printf("We deleted %d rows!\n", rc);
 
 	/* Run a statement with injected values */
-<<<<<<< HEAD
 	dbo = radb_prepare(\
 		db,\
 		"SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u",\
 		"JohnDoe's Mother", 97\
 	);
-=======
-	dbo = radb_prepare(db,"SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u", "JohnDoe's Mother", 97);
->>>>>>> 1b5d2ab7ce8ec624c1db8ce923c5dd36518e3f7b
 	while ((result = radb_fetch_row(dbo))) {
 		printf("City: %s, country: %s, no. of pets: %u\n", \
 			result->column[0].data.string, \
@@ -49,19 +45,11 @@ void someFunc(void) {
 SQL Statements can be used with injected values through a printf-like system.\\
 The following tags are supported:
 |=Tag|=Assigned value|
-<<<<<<< HEAD
 |{{{%s}}}| A string (char*)|
 |{{{%u}}}|An unsigned integer (unsigned int or uint32_t)|
 |{{{%d}}}|A signed integer (signed int or int32_t)|
 |{{{%l}}}|A 64 bit signer integer (signed long long int or int64_t)|
 |{{{%f}}}|A 64-bit floating point value (double)|
-=======
-| %s| A string (const char*)|
-| %u| An unsigned integer (unsigned int)|
-| %d| A signed integer (signed int)|
-| %l| A 64 bit signer integer (signed long long int)|
-| %f| A 64-bit floating point value (double)|
->>>>>>> 1b5d2ab7ce8ec624c1db8ce923c5dd36518e3f7b
 
 ===Using formatted statements
 The functions //radb_run_inject// and //radb_prepare// support formatted statements:
@@ -78,11 +66,8 @@ int hits = radb_query(dbo);
 radb_inject(dbo, 54321, "Some other guy");
 hits = radb_query(dbo);
 }}}
-<<<<<<< HEAD
 
 ==Public functions
 
 * int radb_run(radbMaster *radbm, const char *statement):\\
 blablabla
-=======
->>>>>>> 1b5d2ab7ce8ec624c1db8ce923c5dd36518e3f7b
