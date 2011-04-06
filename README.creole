@@ -1,22 +1,63 @@
 =RADB
 A simple SQL layer for using the same API calls for different engines.
+All connection handles and objects are handled by the layer, and prepared 
+statements can be accessed through the printf-styled functions.
 
-==Example:
+==A quick example:
 {{{
 #include "radb.h"
 void someFunc(void) {
 	radbMaster* db;
 	radbObject* dbo;
 	radbResult* result;
+	int rc;
+
+	/* Initialize the database connection */
 	db = radb_init_sqlite("mydatabase.db");
-	dbo = radb_prepare("SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u", "JohnDoe's Mother", 97);
-	while ((result = radb_step(dbo))) {
+
+	/* Run a simple query */
+	rc = radb_run(db, "DELETE FROM `myTable` WHERE age < 10"); // rc holds the rows affected by this.
+	printf("We deleted %d rows!\n", rc);
+
+	/* Run a statement with injected values */
+	dbo = radb_prepare(db,"SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u", "JohnDoe's Mother", 97);
+	while ((result = radb_fetch_row(dbo))) {
 		printf("City: %s, country: %s, no. of pets: %u\n", \
 			result->column[0].data.string, \
 			result->column[1].data.string, \
 			result->column[2].data.uint32 );
 			
 	}
-	radb_cleanup(dbo); /* Clean up results and close the handle */
+	/* Clean up results and close the handle */
+	radb_cleanup(dbo); 
+
+	/* Close the database connection */
+	radb_close(db);
 }
+}}}
+
+==Formatted statements
+SQL Statements can be used with injected values through a printf-like system.\\
+The following tags are supported:
+|=Tag|=Assigned value|
+| %s| A string (const char*)|
+| %u| An unsigned integer (unsigned int)|
+| %d| A signed integer (signed int)|
+| %l| A 64 bit signer integer (signed long long int)|
+| %f| A 64-bit floating point value (double)|
+
+===Using formatted statements
+The functions //radb_run_inject// and //radb_prepare// support formatted statements:
+{{{
+/* Run a simple query */
+radb_run_inject(db, "SELECT * FROM `test` WHERE id = %u and name = %s", 12345, "Some Name");
+
+/* Prepare a statement for multiple injections */
+radbObject* dbo = radb_prepare("SELECT * FROM `test` WHERE id = %u and name = %s");
+radb_inject(dbo, 12345, "Blah blah blah");
+int hits = radb_query(dbo);
+
+/* Inject some other values and rerun the query */
+radb_inject(dbo, 54321, "Some other guy");
+hits = radb_query(dbo);
 }}}
