@@ -53,23 +53,23 @@ The following tags are supported:
   </tr>
   <tr>
     <td>%s</td>
-    <td>A string value (char* or const char*)</td>
+    <td>A string value (`char*` or `const char*`)</td>
   </tr>
   <tr>
     <td>%u</td>
-    <td>An unsigned 32 bit integer (unsigned int or uint32_t)</td>
+    <td>An unsigned 32 bit integer (`unsigned int` or `uint32_t`)</td>
   </tr>
   <tr>
     <td>%d</td>
-    <td>A signed 32 bit integer (signed int or int32_t)</td>
+    <td>A signed 32 bit integer (`signed int` or `int32_t`)</td>
   </tr>
   <tr>
     <td>%l</td>
-    <td>A signed 64 bit integer (signed long long int or int64_t)</td>
+    <td>A signed 64 bit integer (`signed long long` int or `int64_t`)</td>
   </tr>
   <tr>
     <td>%f</td>
-    <td>A 64 bit floating point value (double)</td>
+    <td>A 64 bit floating point value (`double`)</td>
   </tr>
 </table>
 
@@ -94,36 +94,36 @@ Public functions
 ----------------
 
 * `radbMaster* radb_init_sqlite(const char* filename)`:
-> Opens up an SQLite3 database file and returns a pointer to the radbMaster struct handling it.
+    Opens up an SQLite3 database file and returns a pointer to the radbMaster struct handling it.
     
 * `radbMaster *radb_init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port)`:
-> Opens up the number of connections specified by `threads` to the MySQL host and returns a pointer to the radbMaster struct handling it.
+    Opens up the number of connections specified by `threads` to the MySQL host and returns a pointer to the radbMaster struct handling it.
 
 * `int radb_run(radbMaster *radbm, const char *statement)`:
-> Runs the SQL statement and returns either the number of rows affected or returned.
+    Runs the SQL statement and returns either the number of rows affected or returned.
 
 * `int radb_run_inject(radbMaster *radbm, const char *statement, ...)`:
-> Runs the formatted SQL statement and returns either the number of rows affected or returned.
+    Runs the formatted SQL statement and returns either the number of rows affected or returned.
 
 * `radbObject  *radb_prepare(radbMaster *radbm, const char *statement, ...)`:
-> Prepares an SQL statement. 
-> If additional values are supplied, they are injected into the statement as the initial values.
+    Prepares an SQL statement. 
+    If additional values are supplied, they are injected into the statement as the initial values.
 
 * `int radb_inject(radbObject *dbo, ...)`:
-> Injects new values into an already prepared statement.
+    Injects new values into an already prepared statement.
 
 * `int radb_query(radbObject *dbo)`:
-> Executes the prepared statement and returns the number of rows affected or returned.
+    Executes the prepared statement and returns the number of rows affected or returned.
 
 * `radbResult  *radb_fetch_row(radbObject *dbo)`:
-> Fetches the next row of results (if any) and returns it.
-> If no results are left, it returns 0.
+    Fetches the next row of results (if any) and returns it.
+    If no results are left, it returns 0.
 
 * `void    radb_cleanup(radbObject *dbo)`:
-> Cleans up an SQL query so you don't have to.
+    Cleans up an SQL query so you don't have to.
 
 * `void    radb_close(radbMaster *dbm)`:
-> Shuts down the database connection and frees any existing handles.
+    Shuts down the database connection and frees any existing handles.
     
 
 Some final examples
