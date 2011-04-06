@@ -1,13 +1,21 @@
 /*$I0 */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <stdarg.h>
 #if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
+#   include <windows.h>
 #endif
+
+/*$2
+ -----------------------------------------------------------------------------------------------------------------------
+    Uncomment any of these to disable support
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+
+#include <mysql.h>
+#include <sqlite3.h>
 #ifndef _RADB_H_
 #   define _RADB_H_
 #   define RADB_EMPTY      0
@@ -18,9 +26,7 @@
 #   define RADB_BOUND      3
 #   define RADB_EXECUTED   4
 #   define RADB_FETCH      5
-#include <mysql.h>
-#include <sqlite3.h>
-#      ifndef uint32_t
+#   ifndef uint32_t
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
 typedef unsigned int        uint32_t;
@@ -28,8 +34,10 @@ typedef signed int          int32_t;
 typedef unsigned long long  uint64_t;
 typedef signed int          ssize_t;
 typedef long long           int64_t;
-#endif
-/*#   define RADB_DEBUG*/
+#   endif
+
+
+
 typedef struct
 {
     unsigned    inUse;
@@ -97,6 +105,8 @@ typedef struct
     radbResult  *result;
     radbMaster  *master;
     void        *inputBindings;
+    char        inputs[64];
+    const char  *lastError;
 } radbObject;
 
 /*$2
@@ -105,15 +115,104 @@ typedef struct
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-int         radb_do(radbMaster *radbm, const char *statement, ...);
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_run: Run a plain SQL command and retrieve the number of rows affected or returned, nothing else. This function
+    is a wrapper for opening, querying and closing a database handle.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+int radb_run(radbMaster *radbm, const char *statement);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_run_inject: Same as radb_run, but with a formatted statement with injected values.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+int radb_run_inject(radbMaster *radbm, const char *statement, ...);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_prepare: Initiates a prepared statement with (or without) injected values. If you have injected values (or
+    none are needed), you can call radb_query to retrieve the number of rows affected or returned, depending on your
+    statement.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
 radbObject  *radb_prepare(radbMaster *radbm, const char *statement, ...);
-void        radb_free_result(radbResult *result);
-radbResult  *radb_fetch_row(void *state);
+radbObject  *radb_prepare_vl(radbMaster *dbm, const char *statement, va_list vl);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_inject: Injects new values into the prepared statement referenced by dbo.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+int radb_inject(radbObject *dbo, ...);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_inject_vl: Same as radb_inject but with a va_list instead.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+int radb_inject_vl(radbObject *dbo, va_list args);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_query: Runs the prepared statement and returns the number of rows affected of returned (depending on your SQL
+    operation)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+int radb_query(radbObject *dbo);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_step (aka radb_fetch_row): Fetches a result from the active query. If the query hasn't been executed yet.
+    radb_step takes care of that as well.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
 radbResult  *radb_step(radbObject *dbo);
-void        radb_cleanup(radbObject *dbo);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_free_result: Frees up a result struct. You shouldn't use this unless you know what you're doing - instead, use
+    radb_cleanup at the end of your query.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+void    radb_free_result(radbResult *result);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_cleanup: Cleans up after a statement has been executed and the results, bindings etc are no longer needed.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+void    radb_cleanup(radbObject *dbo);
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_prepare_result: Internal function for preparing the result structure based on the SQL operation
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+void        radb_prepare_result(radbObject *dbo);
 const char  *radb_last_error(radbObject *dbo);
-#   define radb_free(a)    radb_free_result(a)
-#   define radb_run        radb_do
+#   define radb_free       radb_free_result
+#   define radb_fetch_row  radb_step
+#   define radb_do         radb_run
+
+/*$1
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    radb_close: Shuts down the database connection and frees up the handles etc etc.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+
+void    radb_close(radbMaster *dbm);
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
