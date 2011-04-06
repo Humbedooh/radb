@@ -1,0 +1,351 @@
+RADB
+====
+**RADB** is a simple SQL layer for using the same API calls for different engines.
+All connection handles and objects are handled by the layer, and prepared 
+statements can be accessed through the printf-styled functions.
+
+A quick example:
+----------------
+
+    #include "radb.h"
+    void someFunc(void) {
+        radbMaster* db;
+        radbObject* dbo;
+        radbResult* result;
+        int rc;
+
+        /* Initialize the database connection */
+        db = radb_init_sqlite("mydatabase.db");
+
+        /* Run a simple query */
+        rc = radb_run(db, "DELETE FROM `myTable` WHERE age < 10"); // rc holds the rows affected by this.
+        printf("We deleted %d rows!\n", rc);
+
+        /* Run a statement with injected values */
+        dbo = radb_prepare(\
+            db,\
+            "SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u",\
+            "JohnDoe's Mother", 97\
+        );
+        while ((result = radb_fetch_row(dbo))) {
+            printf("City: %s, country: %s, no. of pets: %u\n", \
+                result->column[0].data.string, \
+                result->column[1].data.string, \
+                result->column[2].data.uint32 );
+                
+        }
+        /* Clean up results and close the handle */
+        radb_cleanup(dbo); 
+
+        /* Close the database connection */
+        radb_close(db);
+    }
+
+
+Formatted statements
+--------------------
+SQL Statements can be used with injected values through a printf-like system.
+The following tags are supported:
+<table>
+  <tr>
+    <th>Tag:</th>
+    <th>Assigned value:</th>
+  </tr>
+  <tr>
+    <td>%s</td>
+    <td>A string value (char* or const char*)</td>
+  </tr>
+  <tr>
+    <td>%u</td>
+    <td>An unsigned 32 bit integer (unsigned int or uint32_t)</td>
+  </tr>
+  <tr>
+    <td>%d</td>
+    <td>A signed 32 bit integer (signed int or int32_t)</td>
+  </tr>
+  <tr>
+    <td>%l</td>
+    <td>A signed 64 bit integer (signed long long int or int64_t)</td>
+  </tr>
+  <tr>
+    <td>%f</td>
+    <td>A 64 bit floating point value (double)</td>
+  </tr>
+</table>
+
+
+###Using formatted statements
+The functions `radb_run_inject` and `radb_prepare` support formatted statements:
+
+    /* Run a simple query */
+    radb_run_inject(db, "SELECT * FROM `test` WHERE id = %u and name = %s", 12345, "Some Name");
+
+    /* Prepare a statement for multiple injections */
+    radbObject* dbo = radb_prepare("SELECT * FROM `test` WHERE id = %u and name = %s");
+    radb_inject(dbo, 12345, "Blah blah blah");
+    int hits = radb_query(dbo);
+
+    /* Inject some other values and rerun the query */
+    radb_inject(dbo, 54321, "Some other guy");
+    hits = radb_query(dbo);
+
+
+Public functions
+----------------
+
+* `radbMaster* radb_init_sqlite(const char* filename)`:
+    > Opens up an SQLite3 database file and returns a pointer to the radbMaster struct handling it.
+    
+* `radbMaster *radb_init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port)`:
+    > Opens up the number of connections specified by `threads` to the MySQL host and returns a pointer to the radbMaster struct handling it.
+
+* `int radb_run(radbMaster *radbm, const char *statement)`:
+    > Runs the SQL statement and returns either the number of rows affected or returned.
+
+* `int radb_run_inject(radbMaster *radbm, const char *statement, ...)`:
+    > Runs the formatted SQL statement and returns either the number of rows affected or returned.
+
+* `radbObject  *radb_prepare(radbMaster *radbm, const char *statement, ...)`:
+    > Prepares an SQL statement. 
+    > If additional values are supplied, they are injected into the
+    statement as the initial values.
+
+* `int radb_inject(radbObject *dbo, ...)`:
+    > Injects new values into an already prepared statement.
+
+* `int radb_query(radbObject *dbo)`:
+    > Executes the prepared statement and returns the number of rows affected or returned.
+
+* `radbResult  *radb_fetch_row(radbObject *dbo)`:
+    > Fetches the next row of results (if any) and returns it.
+    > If no results are left, it returns 0.
+
+* `void    radb_cleanup(radbObject *dbo)`:
+    > Cleans up an SQL query so you don't have to.
+
+* `void    radb_close(radbMaster *dbm)`:
+    > Shuts down the database connection and frees any existing handles.
+    
+
+Some final examples
+-------------------
+
+## Creating a table and inserting data
+
+    static const char* names[] = { "Abe Lincoln", "Moe Szyslak", "Jane Doe" };
+    
+    void RunSomeStatements(void) {
+        /* Open the connection to the db */
+        int rc;
+        radbObject* obj;
+        radbMaster* db = radb_init_mysql(5, "127.0.0.1", "username", "somepassword", "somedatabase");
+        if (!db) { fprintf(stderr, "Something went wrong :(\n"); exit(0); }
+        
+        /* Run some statements */
+        radb_run("CREATE TABLE `someTable` (`id` MEDIUMINT UNSIGNED, `name` VARCHAR( 128 ) NOT NULL);");
+        
+        /* Insert all our names into the new table */
+        obj = radb_prepare("INSERT INTO `someTable` (`id, `name`) VALUES (%d, %s)");
+        for (rc = 0;names[rc]; rc++ ) {
+            /* Inject values and call the query function to execute the statement */
+            radb_inject(rc+1, names[rc]);
+            radb_query(obj);
+        }
+        
+        /* Close up */
+        radb_cleanup(obj);
+        radb_close(db);
+    }
+    
+    RADB
+====
+**RADB** is a simple SQL layer for using the same API calls for different engines.
+All connection handles and objects are handled by the layer, and prepared 
+statements can be accessed through the printf-styled functions.
+
+A quick example:
+----------------
+
+    #include "radb.h"
+    void someFunc(void) {
+        radbMaster* db;
+        radbObject* dbo;
+        radbResult* result;
+        int rc;
+
+        /* Initialize the database connection */
+        db = radb_init_sqlite("mydatabase.db");
+
+        /* Run a simple query */
+        rc = radb_run(db, "DELETE FROM `myTable` WHERE age < 10"); // rc holds the rows affected by this.
+        printf("We deleted %d rows!\n", rc);
+
+        /* Run a statement with injected values */
+        dbo = radb_prepare(\
+            db,\
+            "SELECT city, country, numberofpets FROM `someTable` WHERE name = %s and age = %u",\
+            "JohnDoe's Mother", 97\
+        );
+        while ((result = radb_fetch_row(dbo))) {
+            printf("City: %s, country: %s, no. of pets: %u\n", \
+                result->column[0].data.string, \
+                result->column[1].data.string, \
+                result->column[2].data.uint32 );
+                
+        }
+        /* Clean up results and close the handle */
+        radb_cleanup(dbo); 
+
+        /* Close the database connection */
+        radb_close(db);
+    }
+
+
+Formatted statements
+--------------------
+SQL Statements can be used with injected values through a printf-like system.
+The following tags are supported:
+<table>
+  <tr>
+    <th>Tag:</th>
+    <th>Assigned value:</th>
+  </tr>
+  <tr>
+    <td>%s</td>
+    <td>A string value (char* or const char*)</td>
+  </tr>
+  <tr>
+    <td>%u</td>
+    <td>An unsigned 32 bit integer (unsigned int or uint32_t)</td>
+  </tr>
+  <tr>
+    <td>%d</td>
+    <td>A signed 32 bit integer (signed int or int32_t)</td>
+  </tr>
+  <tr>
+    <td>%l</td>
+    <td>A signed 64 bit integer (signed long long int or int64_t)</td>
+  </tr>
+  <tr>
+    <td>%f</td>
+    <td>A 64 bit floating point value (double)</td>
+  </tr>
+</table>
+
+
+###Using formatted statements
+The functions `radb_run_inject` and `radb_prepare` support formatted statements:
+
+    /* Run a simple query */
+    radb_run_inject(db, "SELECT * FROM `test` WHERE id = %u and name = %s", 12345, "Some Name");
+
+    /* Prepare a statement for multiple injections */
+    radbObject* dbo = radb_prepare("SELECT * FROM `test` WHERE id = %u and name = %s");
+    radb_inject(dbo, 12345, "Blah blah blah");
+    int hits = radb_query(dbo);
+
+    /* Inject some other values and rerun the query */
+    radb_inject(dbo, 54321, "Some other guy");
+    hits = radb_query(dbo);
+
+
+Public functions
+----------------
+
+* `radbMaster* radb_init_sqlite(const char* filename)`:
+    > Opens up an SQLite3 database file and returns a pointer to the radbMaster struct handling it.
+    
+* `radbMaster *radb_init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port)`:
+    > Opens up the number of connections specified by `threads` to the MySQL host and returns a pointer to the radbMaster struct handling it.
+
+* `int radb_run(radbMaster *radbm, const char *statement)`:
+    > Runs the SQL statement and returns either the number of rows affected or returned.
+
+* `int radb_run_inject(radbMaster *radbm, const char *statement, ...)`:
+    > Runs the formatted SQL statement and returns either the number of rows affected or returned.
+
+* `radbObject  *radb_prepare(radbMaster *radbm, const char *statement, ...)`:
+    > Prepares an SQL statement. 
+    > If additional values are supplied, they are injected into the
+    statement as the initial values.
+
+* `int radb_inject(radbObject *dbo, ...)`:
+    > Injects new values into an already prepared statement.
+
+* `int radb_query(radbObject *dbo)`:
+    > Executes the prepared statement and returns the number of rows affected or returned.
+
+* `radbResult  *radb_fetch_row(radbObject *dbo)`:
+    > Fetches the next row of results (if any) and returns it.
+    > If no results are left, it returns 0.
+
+* `void    radb_cleanup(radbObject *dbo)`:
+    > Cleans up an SQL query so you don't have to.
+
+* `void    radb_close(radbMaster *dbm)`:
+    > Shuts down the database connection and frees any existing handles.
+    
+
+Some final examples
+-------------------
+
+## Creating a table and inserting data
+
+    static const char* names[] = { "Abe Lincoln", "Moe Szyslak", "Jane Doe" };
+    
+    void RunSomeStatements(void) {
+        
+        /*~~~~~~~~~~~~*/
+        int rc;
+        radbObject* obj;
+        radbMaster* db;
+        /*~~~~~~~~~~~~*/
+        
+        /* Open the connection to the db */
+        db = radb_init_mysql(5, "127.0.0.1", "username", "somepassword", "somedatabase");
+        if (!db) { fprintf(stderr, "Something went wrong :(\n"); exit(0); }
+        
+        /* Run some statements */
+        radb_run("CREATE TABLE `someTable` (`id` MEDIUMINT UNSIGNED, `name` VARCHAR( 128 ) NOT NULL);");
+        
+        /* Insert all our names into the new table */
+        obj = radb_prepare("INSERT INTO `someTable` (`id, `name`) VALUES (%d, %s)");
+        for (rc = 0;names[rc]; rc++ ) {
+            /* Inject values and call the query function to execute the statement */
+            radb_inject(rc+1, names[rc]);
+            radb_query(obj);
+        }
+        
+        /* Close up */
+        radb_cleanup(obj);
+        radb_close(db);
+    }
+        
+
+## Retrieving data from a table
+
+    void getNames(void) {
+        /*~~~~~~~~~~~~*/
+        int rc;
+        radbObject* obj;
+        radbMaster* db;
+        /*~~~~~~~~~~~~*/
+        
+        /* Open the connection to the db */
+        db = radb_init_sqlite("somefile.sqlite");
+        
+        /* Fire off a query to fetch some rows */
+        obj = radb_prepare("SELECT `name`, `id` FROM `someTable`");
+        rc = radb_query(obj); /* rc = Did we get any hits? */
+        
+        if (rc > 0) {
+            radbResult* result;
+            for (result = radb_fetch_row(obj); result != NULL; result = radb_fetch_row(obj)) {
+                printf("ID: %d - Name: %s\n", result->column[1].data.int32, result->column[0].data.string);
+            }
+        }
+        else printf("We got no results!\n");
+        radb_cleanup(obj);
+        radb_close(db);
+    }
+        

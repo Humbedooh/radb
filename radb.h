@@ -35,9 +35,6 @@ typedef unsigned long long  uint64_t;
 typedef signed int          ssize_t;
 typedef long long           int64_t;
 #   endif
-
-
-
 typedef struct
 {
     unsigned    inUse;

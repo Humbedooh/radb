@@ -208,6 +208,7 @@ radbObject *radb_prepare(radbMaster *dbm, const char *statement, ...) {
     radbObject  *dbo;
     va_list     vl;
     /*~~~~~~~~~~~~~*/
+
 #ifdef RADB_DEBUG
     printf("radb_prepare: %s\r\n", statement);
 #endif
@@ -240,12 +241,12 @@ int radb_inject(radbObject *dbo, ...) {
  */
 int radb_inject_vl(radbObject *dbo, va_list args) {
 
-    /*~~~~~~~~~~~~~~~~~~*/
-    int         rc = 0,
-                at;
-    const char  *x = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int                     rc = 0,
+                            at;
+    const char              *x = 0;
 #ifdef MYSQL_CLIENT
-    MYSQL_BIND  *bindings;
+    MYSQL_BIND              *bindings;
     unsigned long           str_len[100];
     unsigned char           object[1024];
     unsigned char           *O;
@@ -255,10 +256,10 @@ int radb_inject_vl(radbObject *dbo, va_list args) {
     signed int              d_sint;
     signed long long int    d_lint;
     double                  d_double;
-    at = strlen(dbo->inputs);
-#endif
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    at = strlen(dbo->inputs);
+#endif
 #ifdef _SQLITE3_H_
     if (dbo->master->dbType == RADB_SQLITE3) {
         for (at = 0; dbo->inputs[at]; at++) {
@@ -484,7 +485,6 @@ void radb_free_result(radbResult *result)
     printf("freeing up result data\r\n");
 #endif
     if (!result) return;
-    
     if (result->column) free(result->column);
     if (result->bindings) free(result->bindings);
     printf("free(result)\r\n");
@@ -504,6 +504,7 @@ int radb_run(radbMaster *radbm, const char *statement) {
     radbObject  *dbo = 0;
     int         rc = 0;
     /*~~~~~~~~~~~~~~~~~*/
+
 #ifdef RADB_DEBUG
     printf("radb_run: %s\r\n", statement);
 #endif
@@ -535,6 +536,7 @@ int radb_run_inject(radbMaster *radbm, const char *statement, ...) {
     radbObject  *dbo = 0;
     int         rc = 0;
     /*~~~~~~~~~~~~~~~~~*/
+
 #ifdef RADB_DEBUG
     printf("radb_run_inject: %s\r\n", statement);
 #endif
