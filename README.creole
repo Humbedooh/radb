@@ -2,7 +2,7 @@
 A simple SQL layer for using the same API calls for different engines.
 All connection handles and objects are handled by the layer, and prepared 
 statements can be accessed through the printf-styled functions.
- 
+
 ==A quick example:
 {{{
 #!c
@@ -69,5 +69,38 @@ hits = radb_query(dbo);
 
 ==Public functions
 
-* int radb_run(radbMaster *radbm, const char *statement):\\
-blablabla
+* {{{int radb_run(radbMaster *radbm, const char *statement):}}}\\
+	Runs the SQL statement and returns either the number of rows affected or returned.
+
+
+* {{{int radb_run_inject(radbMaster *radbm, const char *statement, ...):}}}\\
+	Runs the formatted SQL statement and returns either the number of rows affected or returned.\\
+
+
+* {{{radbObject  *radb_prepare(radbMaster *radbm, const char *statement, ...):}}}\\
+	Prepares an SQL statement. If additional values are supplied, they are injected into the\\
+	statement as the initial values.
+
+* {{{int radb_inject(radbObject *dbo, ...):}}}\\
+	Injects new values into an already prepared statement.
+
+
+
+* {{{int radb_query(radbObject *dbo):}}}\\
+	Executes the prepared statement and returns the number of rows affected or returned.
+
+
+
+* {{{radbResult  *radb_fetch_row(radbObject *dbo):}}}\\
+	Fetches the next row of results (if any) and returns it.\\
+	If no results are left, it returns 0.
+
+
+* {{{void    radb_cleanup(radbObject *dbo):}}}\\
+	Cleans up an SQL query so you don't have to.
+
+
+
+* {{{void    radb_close(radbMaster *dbm):}}}\\
+	Shuts down the database connection and frees any existing handles.
+	
