@@ -1,4 +1,7 @@
 /*$I0 */
+
+#ifndef _RADB_H_
+#define _RADB_H_
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +19,6 @@
 
 #include <mysql.h>
 #include <sqlite3.h>
-#ifndef _RADB_H_
 #   define _RADB_H_
 #   define RADB_EMPTY      0
 #   define RADB_SQLITE3    1
@@ -78,7 +80,7 @@ typedef struct
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     radbResult: A result object holding the currently fetched row of data
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+ */     
 
 typedef struct
 {
@@ -232,4 +234,37 @@ void        *radb_get_handle_mysql(radbPool *pool);
 #   else
 #      define RUMBLE_DB_RESULT    100
 #   endif
+
+
+/* C++ wrapper */
+#ifdef __cplusplus
+class radbo {
+public:
+	radbo(radbMaster* db);
+	radbo(void);
+	~radbo();
+	inline int query();
+	inline void cleanup();
+	inline int inject(...);
+	inline radbResult* fetch_row();
+	radbObject* dbo;
+};
+	class radb {
+	public:
+		~radb();
+		#   ifdef _SQLITE3_H_
+		inline init_sqlite(const char* filename);
+#endif
+		#   ifdef MYSQL_CLIENT
+		inline init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
+#endif
+		inline int run(const char* statement);
+		inline int run_inject(const char* statement, ...);
+		inline radbo* prepare(const char* statement, ...);
+		inline void close();
+	protected:
+		radbMaster* dbm;
+	};
+#endif
+
 #endif
