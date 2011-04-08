@@ -487,7 +487,6 @@ void radb_free_result(radbResult *result)
     if (!result) return;
     if (result->column) free(result->column);
     if (result->bindings) free(result->bindings);
-    printf("free(result)\r\n");
     free(result);
 #ifdef RADB_DEBUG
     printf("done!!\r\n");
@@ -708,16 +707,17 @@ radbMaster *radb_init_sqlite(const char *file) {
 radbResult *radb_fetch_row_sqlite(radbObject *dbo) {
 
     /*~~~~~~~~~~~~~~~*/
-    int         rc = 0,
+    int         rc = -1,
                 i,
                 l;
     radbResult  *res;
     /*~~~~~~~~~~~~~~~*/
 
     if (dbo->status == RADB_FETCH) rc = sqlite3_step((sqlite3_stmt *) dbo->state);
-    if (dbo->status <= RADB_BOUND) radb_query(dbo);
+    if (dbo->status <= RADB_BOUND) rc = (radb_query(dbo) == 1) ? SQLITE_ROW : 0;
     if (dbo->status <= RADB_EXECUTED) radb_prepare_result(dbo);
     res = dbo->result;
+
     if (rc != SQLITE_ROW) return (0);
     for (i = 0; i < res->items; i++) {
         l = sqlite3_column_bytes((sqlite3_stmt *) dbo->state, i);

@@ -1,26 +1,26 @@
 RADB
 ====
-**RADB** is a simple SQL layer for using the same API calls for different engines.
-All connection handles and objects are handled by the layer, and prepared 
-statements can be accessed through the printf-styled functions.
+**RADB** is a simple C/C++ SQL layer for using the same API calls for different engines (currently supporting MySQL and SQLite3).
+All connection handles and objects are handled by the layer, and prepared statements can be accessed through the printf-styled functions.
+You can get the latest source at either sourceforge or at github. 
 
 A quick example:
 ----------------
 
     #include "radb.h"
-    void someFunc(void) {
+    void regular_C_func(void) {
+        /*~~~~~~~~~~~~~~~*/
         radbMaster* db;
         radbObject* dbo;
         radbResult* result;
         int rc;
-
+        /*~~~~~~~~~~~~~~~*/
         /* Initialize the database connection */
         db = radb_init_sqlite("mydatabase.db");
-
+     
         /* Run a simple query */
-        rc = radb_run(db, "DELETE FROM `myTable` WHERE age < 10"); // rc holds the rows affected by this.
-        printf("We deleted %d rows!\n", rc);
-
+        radb_run(db, "DELETE FROM `myTable` WHERE age < 10");
+     
         /* Run a statement with injected values */
         dbo = radb_prepare(\
             db,\
@@ -32,13 +32,26 @@ A quick example:
                 result->column[0].data.string, \
                 result->column[1].data.string, \
                 result->column[2].data.uint32 );
-                
+     
         }
         /* Clean up results and close the handle */
-        radb_cleanup(dbo); 
-
+        radb_cleanup(dbo);
+     
         /* Close the database connection */
         radb_close(db);
+    }
+     
+    void c_plus_plus_version(void) {
+        radb* db = new radb();
+        db->init_sqlite("mydb");
+        db->run("DELETE FROM `stuff` WHERE 1");
+        radbo* dbo = db->prepare("SELECT * FROM `someTable`");
+        while ((radbResult* result = dbo->fetch_row()) {
+            print("stuff: %s\n", result->column[0].data.string);
+        }
+        /* Deleting the classes is enough to clean up the mess */
+        delete dbo;
+        delete db;
     }
 
 
@@ -46,32 +59,12 @@ Formatted statements
 --------------------
 SQL Statements can be used with injected values through a printf-like system.
 The following tags are supported:
-<table>
-  <tr>
-    <th>Tag:</th>
-    <th>Assigned value:</th>
-  </tr>
-  <tr>
-    <td>%s</td>
-    <td>A string value (`char*` or `const char*`)</td>
-  </tr>
-  <tr>
-    <td>%u</td>
-    <td>An unsigned 32 bit integer (`unsigned int` or `uint32_t`)</td>
-  </tr>
-  <tr>
-    <td>%d</td>
-    <td>A signed 32 bit integer (`signed int` or `int32_t`)</td>
-  </tr>
-  <tr>
-    <td>%l</td>
-    <td>A signed 64 bit integer (`signed long long` int or `int64_t`)</td>
-  </tr>
-  <tr>
-    <td>%f</td>
-    <td>A 64 bit floating point value (`double`)</td>
-  </tr>
-</table>
+
+* %s: A string value (`char*` or `const char*`)
+* %u: An unsigned 32 bit integer (`unsigned int` or `uint32_t`)
+* %d: A signed 32 bit integer (`signed int` or `int32_t`)
+* %l: A signed 64 bit integer (`signed long long` int or `int64_t`)
+* %f: A 64 bit floating point value (`double`)
 
 
 ###Using formatted statements
