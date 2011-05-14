@@ -62,14 +62,14 @@ void radb_cleanup(radbObject *dbo)
 #   endif
         radb_release_handle_mysql(&dbo->master->pool, dbo->db);
     }
-
+#endif
 #   ifdef RADB_DEBUG
     printf("Calling radb_free_result\r\n");
 #   endif
     radb_free_result(dbo->result);
     if (dbo->inputBindings) free(dbo->inputBindings);
     free((radbObject *) dbo);
-#endif
+
 }
 
 /*
@@ -188,6 +188,7 @@ radbObject *radb_prepare_vl(radbMaster *dbm, const char *statement, va_list vl) 
         rc = sqlite3_prepare_v2((sqlite3 *) dbo->db, sql, -1, (sqlite3_stmt **) &dbo->state, NULL);
     }
 #endif
+    //printf("Prepared: %s\n", sql);
     free(sql);
     if (rc) {
         radb_cleanup(dbo);
@@ -717,7 +718,6 @@ radbResult *radb_fetch_row_sqlite(radbObject *dbo) {
     if (dbo->status <= RADB_BOUND) rc = (radb_query(dbo) == 1) ? SQLITE_ROW : 0;
     if (dbo->status <= RADB_EXECUTED) radb_prepare_result(dbo);
     res = dbo->result;
-
     if (rc != SQLITE_ROW) return (0);
     for (i = 0; i < res->items; i++) {
         l = sqlite3_column_bytes((sqlite3_stmt *) dbo->state, i);

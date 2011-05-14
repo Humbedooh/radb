@@ -17,7 +17,7 @@
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-#include <mysql.h>
+//#include <mysql.h>
 #include <sqlite3.h>
 #   define _RADB_H_
 #   define RADB_EMPTY      0
@@ -28,15 +28,20 @@
 #   define RADB_BOUND      3
 #   define RADB_EXECUTED   4
 #   define RADB_FETCH      5
-#   ifndef uint32_t
+#   ifndef _STDINT_H
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
 typedef unsigned int        uint32_t;
 typedef signed int          int32_t;
 typedef unsigned long long  uint64_t;
-typedef signed int          ssize_t;
+#endif
+#ifndef __int8_t_defined
 typedef long long           int64_t;
 #   endif
+
+#ifndef __ssize_t_defined
+typedef signed int          ssize_t;
+#endif
 typedef struct
 {
     unsigned    inUse;
