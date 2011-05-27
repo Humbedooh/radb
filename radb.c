@@ -20,7 +20,7 @@ radbObject *radb_init_object(radbMaster *dbm) {
         return (0);
     }
 
-    dbo = (radbObject*) calloc(1, sizeof(radbObject));
+    dbo = (radbObject *) calloc(1, sizeof(radbObject));
     dbo->master = dbm;
     dbo->result = 0;
     dbo->inputBindings = 0;
@@ -63,13 +63,12 @@ void radb_cleanup(radbObject *dbo)
         radb_release_handle_mysql(&dbo->master->pool, dbo->db);
     }
 #endif
-#   ifdef RADB_DEBUG
+#ifdef RADB_DEBUG
     printf("Calling radb_free_result\r\n");
-#   endif
+#endif
     radb_free_result(dbo->result);
     if (dbo->inputBindings) free(dbo->inputBindings);
     free((radbObject *) dbo);
-
 }
 
 /*
@@ -188,7 +187,10 @@ radbObject *radb_prepare_vl(radbMaster *dbm, const char *statement, va_list vl) 
         rc = sqlite3_prepare_v2((sqlite3 *) dbo->db, sql, -1, (sqlite3_stmt **) &dbo->state, NULL);
     }
 #endif
-    //printf("Prepared: %s\n", sql);
+
+    /*
+     * printf("Prepared: %s\n", sql);
+     */
     free(sql);
     if (rc) {
         radb_cleanup(dbo);
@@ -707,12 +709,12 @@ radbMaster *radb_init_sqlite(const char *file) {
  */
 radbResult *radb_fetch_row_sqlite(radbObject *dbo) {
 
-    /*~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
     int         rc = -1,
                 i,
                 l;
     radbResult  *res;
-    /*~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
 
     if (dbo->status == RADB_FETCH) rc = sqlite3_step((sqlite3_stmt *) dbo->state);
     if (dbo->status <= RADB_BOUND) rc = (radb_query(dbo) == 1) ? SQLITE_ROW : 0;
@@ -746,29 +748,63 @@ radbResult *radb_fetch_row_sqlite(radbObject *dbo) {
     return (res);
 }
 #endif
-
 #ifdef __cplusplus
 
-radbo::radbo(radbMaster* db) {
-	this->dbo = radb_init_object(db);
-}
-radbo::radbo(void) {};
-inline void radbo::cleanup() {
-	radb_cleanup(this->dbo);
-	this->dbo = 0;
-}
-radbo::~radbo() {
-	if (this->dbo) radb_cleanup(this->dbo);
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+radbo::radbo(radbMaster *db) {
+    this->dbo = radb_init_object(db);
 }
 
-inline int radbo::query() {
-	return radb_query(this->dbo);
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+radbo::radbo(void)
+{ };
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline void radbo::cleanup(void) {
+    radb_cleanup(this->dbo);
+    this->dbo = 0;
 }
-inline radbResult* radbo::fetch_row() {
-	return radb_fetch_row(this->dbo);
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+radbo::~radbo(void) {
+    if (this->dbo) radb_cleanup(this->dbo);
 }
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline int radbo::query(void) {
+    return (radb_query(this->dbo));
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline radbResult *radbo::fetch_row(void) {
+    return (radb_fetch_row(this->dbo));
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 inline int radbo::inject(...) {
-	   /*~~~~~~~*/
+
+    /*~~~~~~~*/
     int     rc;
     va_list vl;
     /*~~~~~~~*/
@@ -779,46 +815,69 @@ inline int radbo::inject(...) {
     return (rc);
 }
 
-inline void radb::close() {
-	if (this->dbm) radb_close(this->dbm);
-	this->dbm = 0;
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline void radb::disconnect(void) {
+    if (this->dbm) radb_close(this->dbm);
+    this->dbm = 0;
 }
 
-radb::~radb() {
-	if (this->dbm) radb_close(this->dbm);
-	this->dbm = 0;
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+radb::~radb(void) {
+    if (this->dbm) radb_close(this->dbm);
+    this->dbm = 0;
 }
 
-inline int radb::run(const char* statement) {
-	return radb_run(this->dbm, statement);
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline int radb::run(const char *statement) {
+    return (radb_run(this->dbm, statement));
 }
-inline int radb::run_inject(const char* statement,...) {
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline int radb::run_inject(const char *statement, ...) {
+
     /*~~~~~~~~~~~~~~~~~*/
     va_list     vl;
     radbObject  *dbo = 0;
     int         rc = 0;
     /*~~~~~~~~~~~~~~~~~*/
 
-#ifdef RADB_DEBUG
+#   ifdef RADB_DEBUG
     printf("radb_run_inject: %s\r\n", statement);
-#endif
+#   endif
     va_start(vl, statement);
-	dbo = radb_prepare_vl(this->dbm, statement, vl);
+    dbo = radb_prepare_vl(this->dbm, statement, vl);
     va_end(vl);
     rc = radb_query(dbo);
     radb_cleanup(dbo);
     return (rc);
 }
 
-inline radbo* radb::prepare(const char* statement, ...) {
-    /*~~~~~~~~~~~~~*/
-    va_list     vl;
-    /*~~~~~~~~~~~~~*/
-	radbo* dbo = new radbo();
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+inline radbo *radb::prepare(const char *statement, ...) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    va_list vl;
+    radbo   *dbo = new radbo();
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
     va_start(vl, statement);
     dbo->dbo = radb_prepare_vl(dbm, statement, vl);
     va_end(vl);
     return (dbo);
 }
-
 #endif

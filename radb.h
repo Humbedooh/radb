@@ -1,15 +1,16 @@
 /*$I0 */
-
 #ifndef _RADB_H_
-#define _RADB_H_
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <stdarg.h>
-#if defined(_WIN32) || defined(_WIN64)
-#   include <windows.h>
-#endif
+#   define _RADB_H_
+#   include <stdio.h>
+#   include <stdlib.h>
+#   include <string.h>
+#   include <time.h>
+#   include <stdarg.h>
+#   if defined(_WIN32) || defined(_WIN64)
+#      include <windows.h>
+#      pragma warning(disable : 5)
+#      pragma warning(disable : 996)
+#   endif
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
@@ -17,8 +18,8 @@
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-//#include <mysql.h>
-#include <sqlite3.h>
+/* include <mysql.h> */
+#   include <sqlite3.h>
 #   define _RADB_H_
 #   define RADB_EMPTY      0
 #   define RADB_SQLITE3    1
@@ -31,17 +32,17 @@
 #   ifndef _STDINT_H
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
-typedef unsigned int        uint32_t;
+typedef unsigned int        _uint32_t;
 typedef signed int          int32_t;
 typedef unsigned long long  uint64_t;
-#endif
-#ifndef __int8_t_defined
+#      define uint32_t    _uint32_t
+#   endif
+#   ifndef __int8_t_defined
 typedef long long           int64_t;
 #   endif
-
-#ifndef __ssize_t_defined
+#   if !defined(__ssize_t_defined) && !defined(_SSIZE_T_)
 typedef signed int          ssize_t;
-#endif
+#   endif
 typedef struct
 {
     unsigned    inUse;
@@ -85,7 +86,7 @@ typedef struct
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     radbResult: A result object holding the currently fetched row of data
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */     
+ */
 
 typedef struct
 {
@@ -240,36 +241,49 @@ void        *radb_get_handle_mysql(radbPool *pool);
 #      define RUMBLE_DB_RESULT    100
 #   endif
 
-
 /* C++ wrapper */
-#ifdef __cplusplus
-class radbo {
+#   ifdef __cplusplus
+class   radbo
+{
+/*
+ -----------------------------------------------------------------------------------------------------------------------
+ -----------------------------------------------------------------------------------------------------------------------
+ */
 public:
-	radbo(radbMaster* db);
-	radbo(void);
-	~radbo();
-	inline int query();
-	inline void cleanup();
-	inline int inject(...);
-	inline radbResult* fetch_row();
-	radbObject* dbo;
+    radbo(radbMaster *db);
+    radbo(void);
+    ~                   radbo(void);
+    inline int          query(void);
+    inline void         cleanup(void);
+    inline int          inject(...);
+    inline radbResult   *fetch_row(void);
+    radbObject          *dbo;
 };
-	class radb {
-	public:
-		~radb();
-		#   ifdef _SQLITE3_H_
-		inline init_sqlite(const char* filename);
-#endif
-		#   ifdef MYSQL_CLIENT
-		inline init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
-#endif
-		inline int run(const char* statement);
-		inline int run_inject(const char* statement, ...);
-		inline radbo* prepare(const char* statement, ...);
-		inline void close();
-	protected:
-		radbMaster* dbm;
-	};
-#endif
+class   radb
+{
+/*
+ -----------------------------------------------------------------------------------------------------------------------
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+public:
+    ~               radb(void);
+#      ifdef _SQLITE3_H_
+    inline          init_sqlite(const char *filename);
+#      endif
+#      ifdef MYSQL_CLIENT
+    inline          init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
+#      endif
+    inline int      run(const char *statement);
+    inline int      run_inject(const char *statement, ...);
+    inline radbo    *prepare(const char *statement, ...);
+    inline void     disconnect(void);
 
+/*
+ -----------------------------------------------------------------------------------------------------------------------
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+protected:
+    radbMaster  *dbm;
+};
+#   endif
 #endif
