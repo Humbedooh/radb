@@ -3,6 +3,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
 
+/* define RADB_DEBUG 1 */
 #include "radb.h"
 
 /*
@@ -40,8 +41,8 @@ radbObject *radb_init_object(radbMaster *dbm) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void radb_cleanup(radbObject *dbo)
-{
+void radb_cleanup(radbObject *dbo) {
+    if (!dbo) return;
 #ifdef RADB_DEBUG
     printf("Cleaning up\r\n");
 #endif
@@ -66,7 +67,7 @@ void radb_cleanup(radbObject *dbo)
 #ifdef RADB_DEBUG
     printf("Calling radb_free_result\r\n");
 #endif
-    radb_free_result(dbo->result);
+    if (dbo->result) radb_free_result(dbo->result);
     if (dbo->inputBindings) free(dbo->inputBindings);
     free((radbObject *) dbo);
 }
@@ -87,9 +88,9 @@ void radb_close(radbMaster *dbm) {
 #ifdef MYSQL_CLIENT
     if (dbm->dbType == RADB_MYSQL) {
 
-        /*~~*/
-        int i;
-        /*~~*/
+        /*~~~~~~~~~~~~~~*/
+        unsigned int    i;
+        /*~~~~~~~~~~~~~~*/
 
         for (i = 0; i < dbm->pool.count; i++) {
             mysql_close((MYSQL *) dbm->pool.children[i].handle);
@@ -107,6 +108,7 @@ void radb_close(radbMaster *dbm) {
  =======================================================================================================================
  */
 const char *radb_last_error(radbObject *dbo) {
+    if (!dbo) return ("(null)");
     return (dbo->lastError ? dbo->lastError : "No error");
 }
 
@@ -179,7 +181,7 @@ radbObject *radb_prepare_vl(radbMaster *dbm, const char *statement, va_list vl) 
 #ifdef MYSQL_CLIENT
     if (dbm->dbType == RADB_MYSQL) {
         dbo->state = mysql_stmt_init((MYSQL *) dbo->db);
-        rc = mysql_stmt_prepare((MYSQL_STMT *) dbo->state, sql, strl);
+        rc = mysql_stmt_prepare((MYSQL_STMT *) dbo->state, sql, (unsigned long) strl);
     }
 #endif
 #ifdef _SQLITE3_H_
@@ -232,6 +234,7 @@ int radb_inject(radbObject *dbo, ...) {
     va_list vl;
     /*~~~~~~~*/
 
+    if (!dbo) return (0);
     va_start(vl, dbo);
     rc = radb_inject_vl(dbo, vl);
     va_end(vl);
@@ -261,8 +264,10 @@ int radb_inject_vl(radbObject *dbo, va_list args) {
     double                  d_double;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    at = strlen(dbo->inputs);
+    if (!dbo) return (0);
+    at = (int) strlen(dbo->inputs);
 #endif
+    if (!dbo) return (0);
 #ifdef _SQLITE3_H_
     if (dbo->master->dbType == RADB_SQLITE3) {
         for (at = 0; dbo->inputs[at]; at++) {
@@ -317,21 +322,21 @@ int radb_inject_vl(radbObject *dbo, va_list args) {
                 printf("- row %d (%p): %s\r\n", at + 1, bindings[at].buffer, (char *) bindings[at].buffer);
 #   endif
                 if (!bindings[at].buffer) bindings[at].is_null_value = 1;
-                str_len[at] = strlen((const char *) bindings[at].buffer);
+                str_len[at] = (unsigned long) strlen((const char *) bindings[at].buffer);
                 bindings[at].buffer_length = str_len[at];
                 bindings[at].length = &str_len[at];
                 break;
 
             case 'u':
                 O = &(object[used]);
-                d_uint = va_arg(args, unsigned int);
+                d_uint = va_arg(args, uint32_t);
                 bindings[at].buffer_type = MYSQL_TYPE_LONG;
                 bindings[at].buffer = (void *) O;
-                str_len[at] = sizeof(unsigned int);
-                bindings[at].buffer_length = str_len[at];
+                str_len[at] = sizeof(uint32_t);
+                bindings[at].buffer_length = sizeof(uint32_t);
                 bindings[at].length = &str_len[at];
                 memcpy(O, &d_uint, str_len[at]);
-                used += str_len[at];
+                used += str_len[at] + 1;
 #   ifdef RADB_DEBUG
                 printf("- row %d (%p): %u\r\n", at + 1, bindings[at].buffer, *((unsigned int *) bindings[at].buffer));
 #   endif
@@ -403,12 +408,14 @@ int radb_inject_vl(radbObject *dbo, va_list args) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int radb_query(radbObject *dbo) {
+signed int radb_query(radbObject *dbo) {
 
-    /*~~~~~~~*/
-    int rc = 0;
-    /*~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    signed int  rc = 0;
+    int         numrows = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
+    if (!dbo) return (0);
 #ifdef _SQLITE3_H_
     if (dbo->master->dbType == RADB_SQLITE3) rc = (sqlite3_step((sqlite3_stmt *) dbo->state) == SQLITE_ROW) ? 1 : 0;
 #endif
@@ -416,12 +423,19 @@ int radb_query(radbObject *dbo) {
     if (dbo->master->dbType == RADB_MYSQL) {
         if (dbo->status == RADB_BOUND) {
             rc = mysql_stmt_execute((MYSQL_STMT *) dbo->state);
-            if (!rc) rc = mysql_stmt_affected_rows((MYSQL_STMT *) dbo->state);
-            if (!rc) rc = mysql_stmt_num_rows((MYSQL_STMT *) dbo->state);
+            mysql_stmt_store_result((MYSQL_STMT *) dbo->state);
+            if (!numrows) numrows = (int) mysql_stmt_num_rows((MYSQL_STMT *) dbo->state);
+            if (!rc) numrows = (int) mysql_stmt_affected_rows((MYSQL_STMT *) dbo->state);
+            if (rc) {
+                printf("Error: %s\r\n", mysql_error((MYSQL *) dbo->db));
+                rc = -1;
+            }
         } else {
-            fprintf(stderr, "[RADB] Couldn't execute the SQL statement!\r\n");
+            fprintf(stderr, "[RADB] Couldn't execute the SQL statement: %s!\r\n", mysql_error((MYSQL *) dbo->db));
             rc = -1;
         }
+
+        rc = numrows;
     }
 #endif
     dbo->status = RADB_EXECUTED;
@@ -433,20 +447,22 @@ int radb_query(radbObject *dbo) {
  =======================================================================================================================
  */
 void radb_prepare_result(radbObject *dbo) {
+    if (!dbo) return;
     dbo->result = 0;
 #ifdef MYSQL_CLIENT
     if (dbo->master->dbType == RADB_MYSQL) {
 
-        /*~~~~~~~~~~~~~~~~~~*/
-        MYSQL_RES   *meta;
-        MYSQL_BIND  *bindings;
-        int         i;
-        /*~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~*/
+        MYSQL_RES       *meta;
+        MYSQL_BIND      *bindings;
+        unsigned int    i;
+        /*~~~~~~~~~~~~~~~~~~~~~~*/
 
         meta = mysql_stmt_result_metadata((MYSQL_STMT *) dbo->state);
         if (meta) {
+            dbo->result = (radbResult *) malloc(sizeof(radbResult));
             dbo->result->items = meta->field_count;
-            dbo->result->column = calloc(sizeof(radbItem), dbo->result->items);
+            dbo->result->column = calloc(sizeof(radbItem), dbo->result->items ? dbo->result->items : 1);
             bindings = calloc(sizeof(MYSQL_BIND), dbo->result->items);
             for (i = 0; i < dbo->result->items; i++) {
                 bindings[i].buffer = (void *) dbo->result->column[i].data.string;
@@ -482,12 +498,11 @@ void radb_prepare_result(radbObject *dbo) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void radb_free_result(radbResult *result)
-{
+void radb_free_result(radbResult *result) {
+    if (!result) return;
 #ifdef RADB_DEBUG
     printf("freeing up result data\r\n");
 #endif
-    if (!result) return;
     if (result->column) free(result->column);
     if (result->bindings) free(result->bindings);
     free(result);
@@ -500,21 +515,35 @@ void radb_free_result(radbResult *result)
  =======================================================================================================================
  =======================================================================================================================
  */
-int radb_run(radbMaster *radbm, const char *statement) {
+signed int radb_run(radbMaster *radbm, const char *statement) {
 
     /*~~~~~~~~~~~~~~~~~*/
     radbObject  *dbo = 0;
-    int         rc = 0;
+    signed int  rc = 0;
     /*~~~~~~~~~~~~~~~~~*/
 
 #ifdef RADB_DEBUG
     printf("radb_run: %s\r\n", statement);
+    if (!radbm) printf("Error: dbm is (null)\r\n");
 #endif
+    if (!radbm) return (-1);
     dbo = radb_init_object(radbm);
 #ifdef MYSQL_CLIENT
     if (radbm->dbType == RADB_MYSQL) {
         dbo->state = mysql_stmt_init((MYSQL *) dbo->db);
-        rc = mysql_stmt_prepare((MYSQL_STMT *) dbo->state, statement, strlen(statement));
+        if (!dbo->state) {
+            printf("radb_run: Couldn't init a statement!\r\n");
+            rc = -1;
+        } else {
+            rc = mysql_stmt_prepare((MYSQL_STMT *) dbo->state, statement, (unsigned long) strlen(statement));
+            if (rc) {
+                printf("radb_run Error: %s\r\n", mysql_error((MYSQL *) dbo->db));
+                rc = -1;
+            } else dbo->status = RADB_BOUND;
+#   ifdef RADB_DEBUG
+            printf("Statement prepared\n");
+#   endif
+        }
     }
 #endif
 #ifdef _SQLITE3_H_
@@ -539,6 +568,7 @@ int radb_run_inject(radbMaster *radbm, const char *statement, ...) {
     int         rc = 0;
     /*~~~~~~~~~~~~~~~~~*/
 
+    if (!radbm) return (-1);
 #ifdef RADB_DEBUG
     printf("radb_run_inject: %s\r\n", statement);
 #endif
@@ -596,10 +626,10 @@ radbMaster *radb_init_mysql(unsigned threads, const char *host, const char *user
  */
 void *radb_get_handle_mysql(radbPool *pool) {
 
-    /*~~~~~~*/
-    int i,
-        x = 5;
-    /*~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~*/
+    unsigned int    i,
+                    x = 5;
+    /*~~~~~~~~~~~~~~~~~~*/
 
     while (x != 0) {
         for (i = 0; i < pool->count; i++) {
@@ -621,9 +651,9 @@ void *radb_get_handle_mysql(radbPool *pool) {
  */
 void radb_release_handle_mysql(radbPool *pool, void *handle) {
 
-    /*~~*/
-    int i;
-    /*~~*/
+    /*~~~~~~~~~~~~~~*/
+    unsigned int    i;
+    /*~~~~~~~~~~~~~~*/
 
     for (i = 0; i < pool->count; i++) {
         if (pool->children[i].handle == handle) {
@@ -639,10 +669,10 @@ void radb_release_handle_mysql(radbPool *pool, void *handle) {
  */
 radbResult *radb_fetch_row_mysql(radbObject *dbo) {
 
-    /*~~~~~~~*/
-    int rc = 0,
-        i = 0;
-    /*~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
+    int             rc = 0;
+    unsigned int    i = 0;
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     if (dbo->status <= RADB_BOUND) radb_query(dbo);
     if (dbo->status <= RADB_EXECUTED) {
@@ -670,9 +700,11 @@ radbResult *radb_fetch_row_mysql(radbObject *dbo) {
             fprintf(stderr, "[RADB] Found %d truncated fields\r\n", x);
         }
 
+        printf("No more rows\r\n");
         return (0);
     }
 
+    printf("found a row!\r\n");
     return (dbo->result);
 }
 #endif
@@ -709,12 +741,12 @@ radbMaster *radb_init_sqlite(const char *file) {
  */
 radbResult *radb_fetch_row_sqlite(radbObject *dbo) {
 
-    /*~~~~~~~~~~~~~~~~*/
-    int         rc = -1,
-                i,
-                l;
-    radbResult  *res;
-    /*~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    int             rc = -1,
+                    l;
+    unsigned int    i = 0;
+    radbResult      *res;
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (dbo->status == RADB_FETCH) rc = sqlite3_step((sqlite3_stmt *) dbo->state);
     if (dbo->status <= RADB_BOUND) rc = (radb_query(dbo) == 1) ? SQLITE_ROW : 0;
