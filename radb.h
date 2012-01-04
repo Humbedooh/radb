@@ -69,7 +69,8 @@ typedef struct
 
 typedef struct
 {
-    enum { STRING = 1, NUMBER = 2 }           type;
+    enum { STRING = 1, NUMBER = 2 }           types;
+    unsigned    type;
     unsigned    size;
     union
     {
@@ -257,7 +258,7 @@ public:
     inline int          query(void);
     inline void         cleanup(void);
     inline int          inject(...);
-    inline radbResult   *fetch_row(void);
+     radbResult   *fetch_row(void);
     radbObject          *dbo;
 };
 class   radb
@@ -269,15 +270,15 @@ class   radb
 public:
     ~               radb(void);
 #      ifdef _SQLITE3_H_
-    inline          init_sqlite(const char *filename);
+     void         init_sqlite(const char *filename);
 #      endif
 #      ifdef MYSQL_CLIENT
     inline          init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
 #      endif
-    inline int      run(const char *statement);
-    inline int      run_inject(const char *statement, ...);
-    inline radbo    *prepare(const char *statement, ...);
-    inline void     disconnect(void);
+     int      run(const char *statement);
+     int      run_inject(const char *statement, ...);
+     radbo    *prepare(const char *statement, ...);
+     void     disconnect(void);
 
 /*
  -----------------------------------------------------------------------------------------------------------------------
