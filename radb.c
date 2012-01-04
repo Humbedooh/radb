@@ -5,6 +5,9 @@
 
 /* define RADB_DEBUG 1 */
 #include "radb.h"
+#ifndef _SQLITE3_H_
+#   define _SQLITE3_H_
+#endif
 
 /*
  =======================================================================================================================
@@ -69,7 +72,7 @@ void radb_cleanup(radbObject *dbo) {
 #endif
     if (dbo->result) radb_free_result(dbo->result);
     if (dbo->inputBindings) free(dbo->inputBindings);
-    free((radbObject *) dbo);
+    free(dbo);
 }
 
 /*
@@ -412,7 +415,9 @@ signed int radb_query(radbObject *dbo) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     signed int  rc = 0;
+#ifdef MYSQL_CLIENT
     int         numrows = 0;
+#endif
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (!dbo) return (0);
