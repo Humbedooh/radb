@@ -273,7 +273,7 @@ public:
      void         init_sqlite(const char *filename);
 #      endif
 #      ifdef MYSQL_CLIENT
-    inline          init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
+    void          init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
 #      endif
      int      run(const char *statement);
      int      run_inject(const char *statement, ...);
