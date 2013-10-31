@@ -11,6 +11,8 @@
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
 #      include <mysql.h>
+#   else
+#      include <stdint.h>
 #   endif
 
 /*$2
@@ -36,14 +38,11 @@ typedef unsigned short      uint16_t;
 typedef unsigned int        _uint32_t;
 typedef signed int          int32_t;
 typedef unsigned long long  uint64_t;
+typedef long long           int64_t;
+typedef signed int          ssize_t;
 #      define uint32_t    _uint32_t
 #   endif
-#   ifndef __int8_t_defined
-typedef long long           int64_t;
-#   endif
-#   if !defined(__ssize_t_defined) && !defined(_SSIZE_T_)
-typedef signed int          ssize_t;
-#   endif
+
 typedef struct
 {
     unsigned    inUse;
